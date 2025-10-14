@@ -23,7 +23,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { db as firebaseDb } from "./firebase";
 import { ref, onValue } from "firebase/database";
-import logo from "../public/ChatGPT Image Oct 7, 2025, 07_15_54 PM (1).png";
+import logo from "./assets/ChatGPT Image Oct 7, 2025, 07_15_54 PM (1).png";
 
 /**
  * Minimal module declarations so TypeScript doesn't error about missing declarations.
