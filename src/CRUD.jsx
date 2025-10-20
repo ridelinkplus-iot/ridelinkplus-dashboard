@@ -1,263 +1,677 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { ref, set, get, remove, onValue, push } from "firebase/database";
+import { ref, set, remove, onValue } from "firebase/database";
+import { Users, MapPin, Bus, Edit2, Trash2, Plus, X } from "lucide-react";
 
 export default function CRUD() {
-  const [buses, setBuses] = useState({});
+  const [owners, setOwners] = useState({});
   const [routes, setRoutes] = useState({});
+  const [buses, setBuses] = useState({});
 
-  // form states
-  const [busForm, setBusForm] = useState({
-    busId: "",
-    routeId: "",
-    lat: "",
-    lon: "",
-    passengers: ""
+  // ---------- FORM STATES ----------
+  const [ownerForm, setOwnerForm] = useState({
+    ownerId: "",
+    fullName: "",
+    address: "",
+    mobile: "",
+    nic: "",
+    permitId: "",
+    email: "",
+    password: ""
   });
 
   const [routeForm, setRouteForm] = useState({
     routeId: "",
-    name: "",
-    stops: ""
+    place1: "",
+    place2: ""
   });
 
-  // Realtime load data
+  const [busForm, setBusForm] = useState({
+    busId: "",
+    routeId: "",
+    ownerId: "",
+    lat: "",
+    lon: ""
+  });
+
+  // ---------- EDIT FLAGS ----------
+  const [editingOwner, setEditingOwner] = useState(false);
+  const [editingRoute, setEditingRoute] = useState(false);
+  const [editingBus, setEditingBus] = useState(false);
+
+  // ---------- LOAD DATA ----------
   useEffect(() => {
-    const busesRef = ref(db, "buses");
-    const routesRef = ref(db, "routes");
-    onValue(busesRef, (snap) => setBuses(snap.val() || {}));
-    onValue(routesRef, (snap) => setRoutes(snap.val() || {}));
+    onValue(ref(db, "owners"), (snap) => setOwners(snap.val() || {}));
+    onValue(ref(db, "routes"), (snap) => setRoutes(snap.val() || {}));
+    onValue(ref(db, "buses"), (snap) => setBuses(snap.val() || {}));
   }, []);
 
-  // Add/Update Bus
-  const saveBus = async () => {
-    if (!busForm.busId) return alert("Enter Bus ID");
-    const busRef = ref(db, `buses/${busForm.busId}`);
-    await set(busRef, {
-      busId: busForm.busId,
-      routeId: busForm.routeId,
-      lat: parseFloat(busForm.lat),
-      lon: parseFloat(busForm.lon),
-      passengers: parseInt(busForm.passengers) || 0
+  // ---------- OWNER CRUD ----------
+  const saveOwner = async () => {
+    if (!ownerForm.ownerId) return alert("Enter Owner ID");
+    const ownerRef = ref(db, `owners/${ownerForm.ownerId}`);
+    await set(ownerRef, ownerForm);
+    alert(editingOwner ? "✅ Owner updated!" : "✅ Owner added!");
+    setOwnerForm({
+      ownerId: "",
+      fullName: "",
+      address: "",
+      mobile: "",
+      nic: "",
+      permitId: "",
+      email: "",
+      password: ""
     });
-    alert("Bus saved!");
-    setBusForm({ busId: "", routeId: "", lat: "", lon: "", passengers: "" });
+    setEditingOwner(false);
   };
 
-  const deleteBus = async (id) => {
-    if (window.confirm("Delete this bus?")) {
-      await remove(ref(db, `buses/${id}`));
+  const editOwner = (o) => {
+    setOwnerForm(o);
+    setEditingOwner(true);
+  };
+
+  const deleteOwner = async (id) => {
+    if (window.confirm("Delete this owner?")) {
+      await remove(ref(db, `owners/${id}`));
+      setEditingOwner(false);
     }
   };
 
-  // Add/Update Route
+  // ---------- ROUTE CRUD ----------
   const saveRoute = async () => {
     if (!routeForm.routeId) return alert("Enter Route ID");
-    let stopsArr = [];
-    try {
-      stopsArr = JSON.parse(routeForm.stops);
-    } catch (e) {
-      alert('Invalid stops JSON (example: [{"lat":6.05,"lon":80.22}])');
-      return;
-    }
     const routeRef = ref(db, `routes/${routeForm.routeId}`);
-    await set(routeRef, {
-      name: routeForm.name,
-      stops: stopsArr
-    });
-    alert("Route saved!");
-    setRouteForm({ routeId: "", name: "", stops: "" });
+    await set(routeRef, routeForm);
+    alert(editingRoute ? "✅ Route updated!" : "✅ Route added!");
+    setRouteForm({ routeId: "", place1: "", place2: "" });
+    setEditingRoute(false);
+  };
+
+  const editRoute = (r) => {
+    setRouteForm(r);
+    setEditingRoute(true);
   };
 
   const deleteRoute = async (id) => {
     if (window.confirm("Delete this route?")) {
       await remove(ref(db, `routes/${id}`));
+      setEditingRoute(false);
     }
   };
 
+  // ---------- BUS CRUD ----------
+  const saveBus = async () => {
+    if (!busForm.busId) return alert("Enter Bus ID");
+    if (!busForm.routeId || !busForm.ownerId)
+      return alert("Select valid Route ID and Owner ID");
+
+    const busRef = ref(db, `buses/${busForm.busId}`);
+    await set(busRef, {
+      busId: busForm.busId,
+      routeId: busForm.routeId,
+      ownerId: busForm.ownerId,
+      lat: parseFloat(busForm.lat),
+      lon: parseFloat(busForm.lon)
+    });
+    alert(editingBus ? "✅ Bus updated!" : "✅ Bus added!");
+    setBusForm({ busId: "", routeId: "", ownerId: "", lat: "", lon: "" });
+    setEditingBus(false);
+  };
+
+  const editBus = (b) => {
+    setBusForm(b);
+    setEditingBus(true);
+  };
+
+  const deleteBus = async (id) => {
+    if (window.confirm("Delete this bus?")) {
+      await remove(ref(db, `buses/${id}`));
+      setEditingBus(false);
+    }
+  };
+
+  // ---------- ADD PASSENGER COUNT ----------
+  const addPassengerCount = async (busId, count) => {
+    if (!count) return;
+    const timestamp = new Date().toISOString().replace(/[.#$[\]:]/g, "_");
+    await set(ref(db, `buses/${busId}/passengers/${timestamp}`), count);
+    alert(`🧍 Added passenger count ${count} to ${busId}`);
+  };
+
+  // =============================================================
   return (
-    <div className="min-h-screen bg-black p-8 flex flex-col gap-8">
-      <h1 className="text-2xl font-bold text-center text-indigo-700">
-        RideLink Firebase CRUD Manager
-      </h1>
-
-      {/* ---------- BUS CRUD ---------- */}
-      <section className="bg-black p-6 rounded-2xl shadow-md">
-        <h2 className="text-lg font-semibold mb-4 text-indigo-600">
-          🚌 Manage Buses
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <input
-            placeholder="Bus ID"
-            className="border p-2 rounded"
-            value={busForm.busId}
-            onChange={(e) => setBusForm({ ...busForm, busId: e.target.value })}
-          />
-          <input
-            placeholder="Route ID"
-            className="border p-2 rounded"
-            value={busForm.routeId}
-            onChange={(e) =>
-              setBusForm({ ...busForm, routeId: e.target.value })
-            }
-          />
-          <input
-            placeholder="Latitude"
-            className="border p-2 rounded"
-            value={busForm.lat}
-            onChange={(e) => setBusForm({ ...busForm, lat: e.target.value })}
-          />
-          <input
-            placeholder="Longitude"
-            className="border p-2 rounded"
-            value={busForm.lon}
-            onChange={(e) => setBusForm({ ...busForm, lon: e.target.value })}
-          />
-          <input
-            placeholder="Passengers"
-            className="border p-2 rounded"
-            value={busForm.passengers}
-            onChange={(e) =>
-              setBusForm({ ...busForm, passengers: e.target.value })
-            }
-          />
-        </div>
-        <div className="mt-4">
-          <button
-            onClick={saveBus}
-            className="bg-indigo-600 text-white px-4 py-2 rounded mr-2"
-          >
-            Save Bus
-          </button>
-          <button
-            onClick={() =>
-              setBusForm({
-                busId: "",
-                routeId: "",
-                lat: "",
-                lon: "",
-                passengers: ""
-              })
-            }
-            className="border px-4 py-2 rounded"
-          >
-            Clear
-          </button>
+    <div className="space-y-8">
+      {/* ---------- OWNER CRUD ---------- */}
+      <section className="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-[#0B7285] to-[#0d8fa3] px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-white">Manage Owners</h2>
+          </div>
         </div>
 
-        <div className="mt-6">
-          <h3 className="font-semibold mb-2">Existing Buses</h3>
-          <table className="w-full text-sm border">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="border p-1">Bus ID</th>
-                <th className="border p-1">Route</th>
-                <th className="border p-1">Lat</th>
-                <th className="border p-1">Lon</th>
-                <th className="border p-1">Pass</th>
-                <th className="border p-1">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.values(buses).map((b) => (
-                <tr key={b.busId}>
-                  <td className="border p-1">{b.busId}</td>
-                  <td className="border p-1">{b.routeId}</td>
-                  <td className="border p-1">{b.lat}</td>
-                  <td className="border p-1">{b.lon}</td>
-                  <td className="border p-1">{b.passengers}</td>
-                  <td className="border p-1">
-                    <button
-                      className="text-red-600"
-                      onClick={() => deleteBus(b.busId)}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {[
+              ["Owner ID", "ownerId"],
+              ["Full Name", "fullName"],
+              ["Address", "address"],
+              ["Mobile", "mobile"],
+              ["NIC", "nic"],
+              ["Permit ID", "permitId"],
+              ["Email", "email"],
+              ["Password", "password"]
+            ].map(([ph, key]) => (
+              <div key={key}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {ph}
+                </label>
+                <input
+                  type={key === "password" ? "password" : "text"}
+                  placeholder={ph}
+                  className={`w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
+                    key === "ownerId" && editingOwner
+                      ? "bg-yellow-50 border-yellow-300"
+                      : "border-gray-300 hover:border-[#0B7285]"
+                  }`}
+                  value={ownerForm[key]}
+                  onChange={(e) =>
+                    setOwnerForm({ ...ownerForm, [key]: e.target.value })
+                  }
+                  disabled={key === "ownerId" && editingOwner}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={saveOwner}
+              className="flex items-center gap-2 bg-gradient-to-r from-[#0B7285] to-[#0d8fa3] hover:from-[#0d8fa3] hover:to-[#0B7285] text-white px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              {editingOwner ? (
+                <Edit2 className="w-4 h-4" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              {editingOwner ? "Update Owner" : "Save Owner"}
+            </button>
+            <button
+              onClick={() => {
+                setOwnerForm({
+                  ownerId: "",
+                  fullName: "",
+                  address: "",
+                  mobile: "",
+                  nic: "",
+                  permitId: "",
+                  email: "",
+                  password: ""
+                });
+                setEditingOwner(false);
+              }}
+              className="flex items-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-200"
+            >
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Existing Owners
+            </h3>
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Owner ID
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Full Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Mobile
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.values(owners).map((o) => (
+                    <tr
+                      key={o.ownerId}
+                      className="hover:bg-gray-50 transition-colors"
                     >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {o.ownerId}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {o.fullName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {o.mobile}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {o.email}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            className="inline-flex items-center gap-1 text-[#0B7285] hover:text-[#0d8fa3] font-medium text-sm transition-colors"
+                            onClick={() => editOwner(o)}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Edit
+                          </button>
+                          <button
+                            className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 font-medium text-sm transition-colors"
+                            onClick={() => deleteOwner(o.ownerId)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ---------- ROUTE CRUD ---------- */}
-      <section className="bg-black p-6 rounded-2xl shadow-md">
-        <h2 className="text-lg font-semibold mb-4 text-indigo-600">
-          🗺️ Manage Routes
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <input
-            placeholder="Route ID"
-            className="border p-2 rounded"
-            value={routeForm.routeId}
-            onChange={(e) =>
-              setRouteForm({ ...routeForm, routeId: e.target.value })
-            }
-          />
-          <input
-            placeholder="Route Name"
-            className="border p-2 rounded"
-            value={routeForm.name}
-            onChange={(e) =>
-              setRouteForm({ ...routeForm, name: e.target.value })
-            }
-          />
-        </div>
-        <textarea
-          placeholder='Stops JSON e.g. [{"lat":6.05,"lon":80.22},{"lat":6.06,"lon":80.24}]'
-          className="border p-2 rounded w-full mt-3 h-24"
-          value={routeForm.stops}
-          onChange={(e) =>
-            setRouteForm({ ...routeForm, stops: e.target.value })
-          }
-        />
-        <div className="mt-3">
-          <button
-            onClick={saveRoute}
-            className="bg-indigo-600 text-white px-4 py-2 rounded mr-2"
-          >
-            Save Route
-          </button>
-          <button
-            onClick={() => setRouteForm({ routeId: "", name: "", stops: "" })}
-            className="border px-4 py-2 rounded"
-          >
-            Clear
-          </button>
+      <section className="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-[#0B7285] to-[#0d8fa3] px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <MapPin className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-white">Manage Routes</h2>
+          </div>
         </div>
 
-        <div className="mt-6">
-          <h3 className="font-semibold mb-2">Existing Routes</h3>
-          <table className="w-full text-sm border">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="border p-1">Route ID</th>
-                <th className="border p-1">Name</th>
-                <th className="border p-1">Stops</th>
-                <th className="border p-1">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(routes).map(([id, r]) => (
-                <tr key={id}>
-                  <td className="border p-1">{id}</td>
-                  <td className="border p-1">{r.name}</td>
-                  <td className="border p-1 text-xs">
-                    {r.stops?.length} stops
-                  </td>
-                  <td className="border p-1">
-                    <button
-                      className="text-red-600"
-                      onClick={() => deleteRoute(id)}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Route ID
+              </label>
+              <input
+                placeholder="Route ID"
+                className={`w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
+                  editingRoute
+                    ? "bg-yellow-50 border-yellow-300"
+                    : "border-gray-300 hover:border-[#0B7285]"
+                }`}
+                value={routeForm.routeId}
+                onChange={(e) =>
+                  setRouteForm({ ...routeForm, routeId: e.target.value })
+                }
+                disabled={editingRoute}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Place 1
+              </label>
+              <input
+                placeholder="Place 1"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={routeForm.place1}
+                onChange={(e) =>
+                  setRouteForm({ ...routeForm, place1: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Place 2
+              </label>
+              <input
+                placeholder="Place 2"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={routeForm.place2}
+                onChange={(e) =>
+                  setRouteForm({ ...routeForm, place2: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={saveRoute}
+              className="flex items-center gap-2 bg-gradient-to-r from-[#0B7285] to-[#0d8fa3] hover:from-[#0d8fa3] hover:to-[#0B7285] text-white px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              {editingRoute ? (
+                <Edit2 className="w-4 h-4" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              {editingRoute ? "Update Route" : "Save Route"}
+            </button>
+            <button
+              onClick={() => {
+                setRouteForm({ routeId: "", place1: "", place2: "" });
+                setEditingRoute(false);
+              }}
+              className="flex items-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-200"
+            >
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Existing Routes
+            </h3>
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Route ID
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Place 1
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Place 2
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.values(routes).map((r) => (
+                    <tr
+                      key={r.routeId}
+                      className="hover:bg-gray-50 transition-colors"
                     >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {r.routeId}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {r.place1}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {r.place2}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            className="inline-flex items-center gap-1 text-[#0B7285] hover:text-[#0d8fa3] font-medium text-sm transition-colors"
+                            onClick={() => editRoute(r)}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Edit
+                          </button>
+                          <button
+                            className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 font-medium text-sm transition-colors"
+                            onClick={() => deleteRoute(r.routeId)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- BUS CRUD ---------- */}
+      <section className="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-[#0B7285] to-[#0d8fa3] px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <Bus className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-white">Manage Buses</h2>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bus ID
+              </label>
+              <input
+                placeholder="Bus ID"
+                className={`w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
+                  editingBus
+                    ? "bg-yellow-50 border-yellow-300"
+                    : "border-gray-300 hover:border-[#0B7285]"
+                }`}
+                value={busForm.busId}
+                onChange={(e) =>
+                  setBusForm({ ...busForm, busId: e.target.value })
+                }
+                disabled={editingBus}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Route
+              </label>
+              <select
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={busForm.routeId}
+                onChange={(e) =>
+                  setBusForm({ ...busForm, routeId: e.target.value })
+                }
+              >
+                <option value="">Select Route</option>
+                {Object.values(routes).map((r) => (
+                  <option key={r.routeId} value={r.routeId}>
+                    {r.place1} - {r.place2}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Owner
+              </label>
+              <select
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={busForm.ownerId}
+                onChange={(e) =>
+                  setBusForm({ ...busForm, ownerId: e.target.value })
+                }
+              >
+                <option value="">Select Owner</option>
+                {Object.values(owners).map((o) => (
+                  <option key={o.ownerId} value={o.ownerId}>
+                    {o.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Latitude
+              </label>
+              <input
+                placeholder="Latitude"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={busForm.lat}
+                onChange={(e) =>
+                  setBusForm({ ...busForm, lat: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Longitude
+              </label>
+              <input
+                placeholder="Longitude"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={busForm.lon}
+                onChange={(e) =>
+                  setBusForm({ ...busForm, lon: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={saveBus}
+              className="flex items-center gap-2 bg-gradient-to-r from-[#0B7285] to-[#0d8fa3] hover:from-[#0d8fa3] hover:to-[#0B7285] text-white px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              {editingBus ? (
+                <Edit2 className="w-4 h-4" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              {editingBus ? "Update Bus" : "Save Bus"}
+            </button>
+            <button
+              onClick={() => {
+                setBusForm({
+                  busId: "",
+                  routeId: "",
+                  ownerId: "",
+                  lat: "",
+                  lon: ""
+                });
+                setEditingBus(false);
+              }}
+              className="flex items-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-200"
+            >
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Existing Buses
+            </h3>
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Bus ID
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Route
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Owner
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Latitude
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Longitude
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Passengers
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.values(buses).map((b) => {
+                    const passengerEntries = b.passengers
+                      ? Object.entries(b.passengers)
+                      : [];
+                    const latestCount =
+                      passengerEntries.length > 0
+                        ? passengerEntries.sort(
+                            ([a], [b]) => new Date(b) - new Date(a)
+                          )[0][1]
+                        : 0;
+
+                    return (
+                      <tr
+                        key={b.busId}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {b.busId}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {b.routeId}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {b.ownerId}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {b.lat}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {b.lon}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#0B7285]/10 text-[#0B7285]">
+                            {latestCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              className="inline-flex items-center gap-1 text-[#0B7285] hover:text-[#0d8fa3] font-medium text-sm transition-colors"
+                              onClick={() => editBus(b)}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Edit
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 font-medium text-sm transition-colors"
+                              onClick={() => deleteBus(b.busId)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-sm transition-colors"
+                              onClick={() =>
+                                addPassengerCount(
+                                  b.busId,
+                                  parseInt(prompt("Enter passenger count:")) ||
+                                    0
+                                )
+                              }
+                            >
+                              <Plus className="w-4 h-4" />
+                              Passenger
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
     </div>
