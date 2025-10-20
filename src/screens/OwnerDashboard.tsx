@@ -60,7 +60,7 @@ interface RevenueData {
 const AdvancedOwnerDashboard: React.FC = () => {
   const [ownerData, setOwnerData] = useState<OwnerData | null>(null);
   const [buses, setBuses] = useState<BusData[]>([]);
-  const [routes, setRoutes] = useState<any[]>([]);
+  useState<any[]>([]);
   const [trips, setTrips] = useState<TripData[]>([]);
   const [revenue, setRevenue] = useState<RevenueData[]>([]);
   const [passengers, setPassengers] = useState<any[]>([]);
@@ -123,8 +123,7 @@ const AdvancedOwnerDashboard: React.FC = () => {
 
         const routesRef = ref(db, "routes");
         onValue(routesRef, (routeSnapshot) => {
-          const allRoutes = routeSnapshot.val();
-          setRoutes(Object.values(allRoutes || {}));
+          routeSnapshot.val();
         });
 
         const tripsRef = ref(db, "trips");
@@ -481,7 +480,7 @@ const AdvancedOwnerDashboard: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) =>
+                  label={({ name, percent }: any) =>
                     `${name} ${(percent * 100).toFixed(0)}%`
                   }
                   outerRadius={80}

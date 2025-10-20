@@ -101,12 +101,11 @@ const OwnerSignup: React.FC = () => {
     const auth = getAuth();
     const db = getDatabase();
     try {
-      const userCredential = await createUserWithEmailAndPassword(
+      await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       );
-      const user = userCredential.user;
       await set(ref(db, "owners/" + formData.ownerId), {
         fullName: formData.fullName,
         ownerId: formData.ownerId,

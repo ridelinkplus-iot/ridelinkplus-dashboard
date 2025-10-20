@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Preloader from "./components/Preloader";
 import Navbar from "./components/Navbar";
 import MainScreen from "./mainScreen";

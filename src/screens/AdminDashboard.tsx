@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { logoutUser } from "../authHelper";
 import { getAuth } from "firebase/auth";
-import { ref, onValue, update, remove } from "firebase/database";
+import { ref, onValue } from "firebase/database";
 import { db } from "../firebase";
 import CRUD from "../CRUD";
 import {
   LineChart,
   Line,
-  PieChart,
-  Pie,
   Cell,
   BarChart,
   Bar,
@@ -21,16 +18,13 @@ import {
   ResponsiveContainer
 } from "recharts";
 import {
-  Users,
   Bus,
-  UserCheck,
   Building2,
   Activity,
   AlertCircle,
   TrendingUp,
   Calendar,
-  Search,
-  Filter
+  Search
 } from "lucide-react";
 
 interface User {
@@ -66,7 +60,7 @@ interface Bus {
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const auth = getAuth();
+  getAuth();
 
   const [users, setUsers] = useState<User[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
