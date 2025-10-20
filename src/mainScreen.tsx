@@ -177,20 +177,6 @@ const styles: Record<string, CSSProperties> = {
     overflow: "hidden"
   },
   headerButton: {
-    background: "var(--yellow-gold)",
-    color: "white",
-    fontWeight: 700,
-    padding: "12px 24px",
-    borderRadius: "14px",
-    border: "none",
-    boxShadow:
-      "0 8px 20px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset",
-    cursor: "pointer",
-    transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-    fontSize: "15px",
-    letterSpacing: "0.3px"
-  },
-  headerButton: {
     background: "linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)",
     color: "white",
     fontWeight: 700,
