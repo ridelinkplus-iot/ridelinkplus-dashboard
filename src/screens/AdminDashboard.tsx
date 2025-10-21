@@ -4,6 +4,8 @@ import { getAuth } from "firebase/auth";
 import { ref, onValue } from "firebase/database";
 import { db } from "../firebase";
 import CRUD from "../CRUD";
+import UserManagement from "../components/UserManagement";
+import SetAdmin from "../components/SetAdmin"; // Temporary import
 import {
   LineChart,
   Line,
@@ -24,7 +26,8 @@ import {
   AlertCircle,
   TrendingUp,
   Calendar,
-  Search
+  Search,
+  Users
 } from "lucide-react";
 
 interface User {
@@ -67,7 +70,7 @@ const AdminDashboard: React.FC = () => {
   const [owners, setOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "buses" | "owners" | "manage"
+    "overview" | "buses" | "owners" | "manage" | "userManagement"
   >("overview");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -302,6 +305,22 @@ const AdminDashboard: React.FC = () => {
                 Manage
               </span>
               {activeTab === "manage" && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#0B7285]"></div>
+              )}
+            </button>
+            <button
+              className={`flex-1 px-6 py-4 text-sm font-semibold transition-all duration-300 relative ${
+                activeTab === "userManagement"
+                  ? "text-[#0B7285] bg-[#0B7285]/5"
+                  : "text-gray-600 hover:text-[#0B7285] hover:bg-gray-50"
+              }`}
+              onClick={() => setActiveTab("userManagement")}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Users className="w-4 h-4" />
+                User Management
+              </span>
+              {activeTab === "userManagement" && (
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#0B7285]"></div>
               )}
             </button>
@@ -764,6 +783,24 @@ const AdminDashboard: React.FC = () => {
               </p>
             </div>
             <CRUD />
+            <div className="mt-8">
+              <SetAdmin />
+            </div>
+          </div>
+        )}
+
+        {/* User Management Tab */}
+        {activeTab === "userManagement" && (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden p-6">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                User Management
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Browse and manage authenticated users
+              </p>
+            </div>
+            <UserManagement />
           </div>
         )}
       </div>

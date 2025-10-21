@@ -171,7 +171,7 @@ export default function CRUD() {
                 <input
                   type={key === "password" ? "password" : "text"}
                   placeholder={ph}
-                  className={`w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
+                  className={`text-black w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
                     key === "ownerId" && editingOwner
                       ? "bg-yellow-50 border-yellow-300"
                       : "border-gray-300 hover:border-[#0B7285]"
@@ -308,7 +308,7 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Route ID"
-                className={`w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
+                className={`text-black w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
                   editingRoute
                     ? "bg-yellow-50 border-yellow-300"
                     : "border-gray-300 hover:border-[#0B7285]"
@@ -326,7 +326,7 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Place 1"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
                 value={routeForm.place1}
                 onChange={(e) =>
                   setRouteForm({ ...routeForm, place1: e.target.value })
@@ -339,7 +339,7 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Place 2"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
                 value={routeForm.place2}
                 onChange={(e) =>
                   setRouteForm({ ...routeForm, place2: e.target.value })
@@ -455,7 +455,7 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Bus ID"
-                className={`w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
+                className={`text-black w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
                   editingBus
                     ? "bg-yellow-50 border-yellow-300"
                     : "border-gray-300 hover:border-[#0B7285]"
@@ -473,7 +473,7 @@ export default function CRUD() {
                 Route
               </label>
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
                 value={busForm.routeId}
                 onChange={(e) =>
                   setBusForm({ ...busForm, routeId: e.target.value })
@@ -493,7 +493,7 @@ export default function CRUD() {
                 Owner
               </label>
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
                 value={busForm.ownerId}
                 onChange={(e) =>
                   setBusForm({ ...busForm, ownerId: e.target.value })
@@ -514,7 +514,7 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Latitude"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
                 value={busForm.lat}
                 onChange={(e) =>
                   setBusForm({ ...busForm, lat: e.target.value })
@@ -527,7 +527,7 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Longitude"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
                 value={busForm.lon}
                 onChange={(e) =>
                   setBusForm({ ...busForm, lon: e.target.value })

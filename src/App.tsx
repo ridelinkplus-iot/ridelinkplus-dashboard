@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { useState, useEffect } from "react";
-import Preloader from "./components/Preloader";
+import PreloaderScreen from "./screens/PreloaderScreen";
 import Navbar from "./components/Navbar";
 import MainScreen from "./mainScreen";
 import Join from "./screens/Join";
@@ -28,7 +28,7 @@ function App() {
   }, []);
 
   if (loading) {
-    return <Preloader />;
+    return <PreloaderScreen onComplete={() => setLoading(false)} />;
   }
 
   return (

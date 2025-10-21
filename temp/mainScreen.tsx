@@ -269,55 +269,22 @@ export default function App(): JSX.Element {
   const mapRef = useRef<any | null>(null);
   const navigate = useNavigate();
   useEffect(() => {
-    const socket = io("http://localhost:4000");
+    const socket = io("http://localhost:4000"); // replace with your deployed backend URL
 
-    // ✅ 1️⃣ Fetch latest data from API when app loads or refreshes
-    const fetchApiData = async () => {
-      try {
-        const response = await fetch("http://localhost:4000/api/buses");
-        const data = await response.json();
-
-        // Merge API data with Firebase buses
-        setBuses((prev) =>
-          prev.map((bus) => ({
-            ...bus,
-            ...(data[bus.busId] || {})
-          }))
-        );
-
-        console.log("✅ Loaded live API data:", data);
-      } catch (err) {
-        console.error("❌ Error fetching API buses:", err);
-      }
-    };
-
-    fetchApiData(); // Run immediately on mount
-
-    // ✅ 2️⃣ Continue to listen for live updates via socket.io
+    // Get initial data
     socket.on("initialData", (data) => {
-      console.log("Initial data from socket:", data);
       setBuses((prev) =>
         prev.map((bus) => ({
           ...bus,
-          ...(data[bus.busId] || {})
+          passengers: data[bus.busId]?.passengers ?? bus.passengers
         }))
       );
     });
 
-    socket.on("busLocationUpdate", ({ busId, lat, lon, passengers }) => {
+    // Listen for live updates
+    socket.on("busUpdate", ({ busId, passengers }) => {
       setBuses((prev) =>
-        prev.map((bus) =>
-          bus.busId === busId
-            ? {
-                ...bus,
-                lat,
-                lon,
-                passengers,
-                lastUpdateSource: "API",
-                lastUpdated: Date.now()
-              }
-            : bus
-        )
+        prev.map((bus) => (bus.busId === busId ? { ...bus, passengers } : bus))
       );
     });
 
@@ -332,34 +299,13 @@ export default function App(): JSX.Element {
       const unsub1 = onValue(busesRef, (snap) => {
         const val = snap.val();
         if (val) {
-          const firebaseBusData = Object.keys(val).map((key) => ({
+          // Convert nested structure to array
+          const busArray = Object.keys(val).map((key) => ({
             ...val[key],
-            busId: key
+            busId: key // Use the key as busId
           }));
-
-          setBuses((prevBuses) => {
-            const prevBusesMap = new Map(
-              prevBuses.map((bus) => [bus.busId, bus])
-            );
-
-            const mergedBuses = firebaseBusData.map((firebaseBus) => {
-              const prevBus = prevBusesMap.get(firebaseBus.busId);
-              if (prevBus) {
-                // If bus exists, merge. Prioritize real-time data.
-                return {
-                  ...firebaseBus, // Static data from Firebase (routeId, etc.)
-                  lat: prevBus.lat ?? firebaseBus.lat,
-                  lon: prevBus.lon ?? firebaseBus.lon,
-                  passengers: prevBus.passengers ?? firebaseBus.passengers,
-                  lastUpdateSource: prevBus.lastUpdateSource,
-                  lastUpdated: prevBus.lastUpdated
-                };
-              }
-              return firebaseBus; // New bus from Firebase
-            });
-            console.log("✅ Merged Firebase data with existing state");
-            return mergedBuses;
-          });
+          console.log("Loaded buses:", busArray);
+          setBuses(busArray);
         } else {
           setBuses([]);
         }
@@ -889,7 +835,9 @@ export default function App(): JSX.Element {
                               Passengers:{" "}
                             </span>
                             <span style={{ fontWeight: 700, color: "#10b981" }}>
-                              {getLatestPassengerCount(b) ?? "N/A"}
+                              {typeof b.passengers === "number"
+                                ? b.passengers
+                                : "N/A"}
                             </span>
                           </div>
                         )}
@@ -1214,7 +1162,33 @@ function BusCard({
 }): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
 
-  const passengerCount = getLatestPassengerCount(bus);
+  // Safely get passenger count - handle both number and object formats
+  const getPassengerCount = () => {
+    if (bus.passengers === undefined || bus.passengers === null)
+      return undefined;
+
+    // If passengers is a number, return it directly
+    if (typeof bus.passengers === "number") {
+      return bus.passengers;
+    }
+
+    // If passengers is an object with timestamp keys, get the latest count
+    if (typeof bus.passengers === "object") {
+      const passengerEntries = Object.entries(bus.passengers);
+      if (passengerEntries.length > 0) {
+        // Sort by timestamp (newest first) and get the latest count
+        const sorted = passengerEntries.sort(
+          ([a], [b]) => new Date(b).getTime() - new Date(a).getTime()
+        );
+        const latestCount = sorted[0][1];
+        return typeof latestCount === "number" ? latestCount : undefined;
+      }
+    }
+
+    return undefined;
+  };
+
+  const passengerCount = getPassengerCount();
 
   return (
     <div
@@ -2108,27 +2082,4 @@ function isNum(v: any): v is number {
 }
 function isFiniteNumber(v: any): v is number {
   return typeof v === "number" && isFinite(v);
-}
-
-// Safely get passenger count - handle both number and object formats
-function getLatestPassengerCount(bus: Bus): number | undefined {
-  const { passengers } = bus;
-  if (passengers === undefined || passengers === null) {
-    return undefined;
-  }
-  if (typeof passengers === "number") {
-    return passengers;
-  }
-  if (typeof passengers === "object") {
-    const passengerEntries = Object.entries(passengers);
-    if (passengerEntries.length > 0) {
-      // Sort by timestamp (newest first) and get the latest count
-      const sorted = passengerEntries.sort(
-        ([a], [b]) => new Date(b).getTime() - new Date(a).getTime()
-      );
-      const latestCount = sorted[0][1];
-      return typeof latestCount === "number" ? latestCount : undefined;
-    }
-  }
-  return undefined;
 }
