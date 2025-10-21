@@ -14,7 +14,7 @@ const SetAdmin: React.FC = () => {
       const functions = getFunctions();
       const setAdmin = httpsCallable(functions, "setAdmin");
       const result = await setAdmin({ email });
-      setMessage(result.data.message);
+      setMessage((result.data as any).message);
     } catch (error) {
       setMessage("An error occurred while setting the admin.");
       console.error(error);

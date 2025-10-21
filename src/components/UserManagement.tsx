@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { Search, UserX, Users, Trash2, RotateCw } from "lucide-react";
+import { Search, Trash2, RotateCw } from "lucide-react";
 
 interface User {
   uid: string;
@@ -13,9 +13,9 @@ interface User {
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -62,7 +62,21 @@ const UserManagement: React.FC = () => {
     );
   }, [users, searchTerm]);
 
-  // Loading & error UIs same as before ...
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-500">Loading users...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-600 font-medium">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
