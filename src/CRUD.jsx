@@ -31,13 +31,17 @@ export default function CRUD() {
     routeId: "",
     ownerId: "",
     lat: "",
-    lon: ""
+    lon: "",
+    status: "offline"
   });
 
   // ---------- EDIT FLAGS ----------
   const [editingOwner, setEditingOwner] = useState(false);
   const [editingRoute, setEditingRoute] = useState(false);
   const [editingBus, setEditingBus] = useState(false);
+  const [originalOwnerId, setOriginalOwnerId] = useState(null);
+  const [originalRouteId, setOriginalRouteId] = useState(null);
+  const [originalBusId, setOriginalBusId] = useState(null);
 
   // ---------- LOAD DATA ----------
   useEffect(() => {
@@ -49,6 +53,15 @@ export default function CRUD() {
   // ---------- OWNER CRUD ----------
   const saveOwner = async () => {
     if (!ownerForm.ownerId) return alert("Enter Owner ID");
+
+    if (
+      editingOwner &&
+      originalOwnerId &&
+      originalOwnerId !== ownerForm.ownerId
+    ) {
+      await remove(ref(db, `owners/${originalOwnerId}`));
+    }
+
     const ownerRef = ref(db, `owners/${ownerForm.ownerId}`);
     await set(ownerRef, ownerForm);
     alert(editingOwner ? "✅ Owner updated!" : "✅ Owner added!");
@@ -63,11 +76,13 @@ export default function CRUD() {
       password: ""
     });
     setEditingOwner(false);
+    setOriginalOwnerId(null);
   };
 
   const editOwner = (o) => {
     setOwnerForm(o);
     setEditingOwner(true);
+    setOriginalOwnerId(o.ownerId);
   };
 
   const deleteOwner = async (id) => {
@@ -80,16 +95,27 @@ export default function CRUD() {
   // ---------- ROUTE CRUD ----------
   const saveRoute = async () => {
     if (!routeForm.routeId) return alert("Enter Route ID");
+
+    if (
+      editingRoute &&
+      originalRouteId &&
+      originalRouteId !== routeForm.routeId
+    ) {
+      await remove(ref(db, `routes/${originalRouteId}`));
+    }
+
     const routeRef = ref(db, `routes/${routeForm.routeId}`);
     await set(routeRef, routeForm);
     alert(editingRoute ? "✅ Route updated!" : "✅ Route added!");
     setRouteForm({ routeId: "", place1: "", place2: "" });
     setEditingRoute(false);
+    setOriginalRouteId(null);
   };
 
   const editRoute = (r) => {
     setRouteForm(r);
     setEditingRoute(true);
+    setOriginalRouteId(r.routeId);
   };
 
   const deleteRoute = async (id) => {
@@ -105,28 +131,93 @@ export default function CRUD() {
     if (!busForm.routeId || !busForm.ownerId)
       return alert("Select valid Route ID and Owner ID");
 
+    if (editingBus && originalBusId && originalBusId !== busForm.busId) {
+      await remove(ref(db, `buses/${originalBusId}`));
+    }
+
     const busRef = ref(db, `buses/${busForm.busId}`);
     await set(busRef, {
       busId: busForm.busId,
       routeId: busForm.routeId,
       ownerId: busForm.ownerId,
-      lat: parseFloat(busForm.lat),
-      lon: parseFloat(busForm.lon)
+      lat: parseFloat(busForm.lat) || 0,
+      lon: parseFloat(busForm.lon) || 0,
+      passengers: 0, // Initialize passengers
+      status: busForm.status,
+      lastUpdated: Date.now() // Add timestamp
     });
     alert(editingBus ? "✅ Bus updated!" : "✅ Bus added!");
-    setBusForm({ busId: "", routeId: "", ownerId: "", lat: "", lon: "" });
+    setBusForm({
+      busId: "",
+      routeId: "",
+      ownerId: "",
+      lat: "",
+      lon: "",
+      status: "offline"
+    });
     setEditingBus(false);
+    setOriginalBusId(null);
   };
 
   const editBus = (b) => {
     setBusForm(b);
     setEditingBus(true);
+    setOriginalBusId(b.busId);
   };
 
   const deleteBus = async (id) => {
     if (window.confirm("Delete this bus?")) {
       await remove(ref(db, `buses/${id}`));
       setEditingBus(false);
+    }
+  };
+
+  const toggleBusStatus = async (bus) => {
+    const newStatus = bus.status === "online" ? "offline" : "online";
+
+    // Optimistically update the UI
+    setBuses((prevBuses) => ({
+      ...prevBuses,
+      [bus.busId]: {
+        ...prevBuses[bus.busId],
+        status: newStatus
+      }
+    }));
+
+    try {
+      const response = await fetch(
+        "http://localhost:4002/api/update-bus-status",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ busId: bus.busId, status: newStatus })
+        }
+      );
+      const data = await response.json();
+      if (!data.success) {
+        // Revert the change if the API call fails
+        setBuses((prevBuses) => ({
+          ...prevBuses,
+          [bus.busId]: {
+            ...prevBuses[bus.busId],
+            status: bus.status
+          }
+        }));
+        alert("Failed to update bus status");
+      }
+    } catch (error) {
+      // Revert the change if there's an error
+      setBuses((prevBuses) => ({
+        ...prevBuses,
+        [bus.busId]: {
+          ...prevBuses[bus.busId],
+          status: bus.status
+        }
+      }));
+      console.error("Error toggling bus status:", error);
+      alert("An error occurred while updating bus status.");
     }
   };
 
@@ -180,7 +271,6 @@ export default function CRUD() {
                   onChange={(e) =>
                     setOwnerForm({ ...ownerForm, [key]: e.target.value })
                   }
-                  disabled={key === "ownerId" && editingOwner}
                 />
               </div>
             ))}
@@ -317,7 +407,6 @@ export default function CRUD() {
                 onChange={(e) =>
                   setRouteForm({ ...routeForm, routeId: e.target.value })
                 }
-                disabled={editingRoute}
               />
             </div>
             <div>
@@ -464,7 +553,6 @@ export default function CRUD() {
                 onChange={(e) =>
                   setBusForm({ ...busForm, busId: e.target.value })
                 }
-                disabled={editingBus}
               />
             </div>
 
@@ -534,6 +622,21 @@ export default function CRUD() {
                 }
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent hover:border-[#0B7285]"
+                value={busForm.status}
+                onChange={(e) =>
+                  setBusForm({ ...busForm, status: e.target.value })
+                }
+              >
+                <option value="offline">Offline</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex gap-3">
@@ -555,7 +658,8 @@ export default function CRUD() {
                   routeId: "",
                   ownerId: "",
                   lat: "",
-                  lon: ""
+                  lon: "",
+                  status: "offline"
                 });
                 setEditingBus(false);
               }}
@@ -591,6 +695,9 @@ export default function CRUD() {
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Passengers
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Status
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
@@ -633,6 +740,18 @@ export default function CRUD() {
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#0B7285]/10 text-[#0B7285]">
                             {latestCount}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => toggleBusStatus(b)}
+                            className={`w-24 inline-flex items-center justify-center gap-1 font-medium text-sm transition-colors rounded-full py-1 px-2 ${
+                              b.status === "online"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {b.status === "online" ? "Online" : "Offline"}
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">

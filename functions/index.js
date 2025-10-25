@@ -1,43 +1,68 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const cors = require("cors")({origin: true});
 
 admin.initializeApp();
 
-exports.listUsers = functions.https.onCall(async (data, context) => {
-  try {
-    // Security check: only allow admin user (optional)
-    if (!context.auth || context.auth.token.email !== "ridelinkplus@gmail.com") {
-      throw new functions.https.HttpsError("permission-denied", "Unauthorized access.");
+exports.getUsers = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const listUsers = await admin.auth().listUsers();
+      const users = listUsers.users.map((user) => ({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || "No Name",
+        provider: user.providerData[0]?.providerId || "Unknown",
+        createdAt: new Date(user.metadata.creationTime).toLocaleString(),
+        lastSignIn: new Date(user.metadata.lastSignInTime).toLocaleString(),
+      }));
+      res.status(200).json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({error: error.message});
     }
-
-    const listUsersResult = await admin.auth().listUsers(1000); // Up to 1000 users
-    const users = listUsersResult.users.map((userRecord) => ({
-      uid: userRecord.uid,
-      email: userRecord.email,
-      displayName: userRecord.displayName,
-      creationTime: userRecord.metadata.creationTime,
-      lastSignInTime: userRecord.metadata.lastSignInTime,
-      disabled: userRecord.disabled,
-    }));
-
-    return { users };
-  } catch (error) {
-    console.error("Error listing users:", error);
-    throw new functions.https.HttpsError("unknown", error.message);
-  }
+  });
 });
 
-exports.deleteUser = functions.https.onCall(async (data, context) => {
-  try {
-    if (!context.auth || context.auth.token.email !== "ridelinkplus@gmail.com") {
-      throw new functions.https.HttpsError("permission-denied", "Unauthorized access.");
+exports.createUser = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const {email, password, displayName} = req.body;
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName,
+      });
+      res.status(201).json(userRecord);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({error: error.message});
     }
+  });
+});
 
-    const { uid } = data;
-    await admin.auth().deleteUser(uid);
-    return { success: true, message: `User ${uid} deleted successfully.` };
-  } catch (error) {
-    console.error("Error deleting user:", error);
-    throw new functions.https.HttpsError("unknown", error.message);
-  }
+exports.updateUser = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const {uid, ...updateData} = req.body;
+      const userRecord = await admin.auth().updateUser(uid, updateData);
+      res.status(200).json(userRecord);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({error: error.message});
+    }
+  });
+});
+
+exports.deleteUser = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const {uid} = req.body;
+      await admin.auth().deleteUser(uid);
+      res.status(200).json({message: "User deleted successfully"});
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({error: error.message});
+    }
+  });
 });

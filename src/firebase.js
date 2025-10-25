@@ -1,12 +1,13 @@
 import { getAnalytics } from "firebase/analytics";
 import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database"; // ✅ This is Realtime DB
+import { getDatabase } from "firebase/database";
+import { getFirestore } from "firebase/firestore";
 
 // Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyARWCfQFeHb-4OKjJIoeP6oeMajx1nHhkE",
   authDomain: "ridelink-26c32.firebaseapp.com",
-  databaseURL: "https://ridelink-26c32-default-rtdb.firebaseio.com", // ✅ Make sure this is correct
+  databaseURL: "https://ridelink-26c32-default-rtdb.firebaseio.com", // ✅ Ensure correct RTDB URL
   projectId: "ridelink-26c32",
   storageBucket: "ridelink-26c32.appspot.com",
   messagingSenderId: "296583693513",
@@ -16,8 +17,10 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app); // ✅ Use Realtime DB, not Firestore
 const analytics = getAnalytics(app);
+const db = getDatabase(app); // ✅ Realtime Database
+const firestoreDB = getFirestore(app); // ✅ Firestore
 
-export { analytics, db };
+// Export both databases
+export { analytics, db, firestoreDB };
 

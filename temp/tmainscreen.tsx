@@ -83,7 +83,6 @@ export default function App(): JSX.Element {
     "idle" | "success" | "not_found" | "error"
   >("idle");
   const [searchMessage, setSearchMessage] = useState<string>("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const mapRef = useRef<any | null>(null);
   const navigate = useNavigate();
   useEffect(() => {
@@ -232,10 +231,9 @@ export default function App(): JSX.Element {
   );
 
   const visibleBuses = useMemo(() => {
-    const onlineBuses = activeBuses.filter((b) => b.status === "online");
-    if (!selectedRoute) return onlineBuses;
+    if (!selectedRoute) return activeBuses;
 
-    const filtered = onlineBuses.filter((b) => {
+    const filtered = activeBuses.filter((b) => {
       const busRouteId = b.routeId?.toString().trim();
       const selectedRouteId = selectedRoute.routeId?.toString().trim();
       const match = busRouteId === selectedRouteId;
@@ -310,11 +308,7 @@ export default function App(): JSX.Element {
 
   return (
     <div className="container">
-      <div
-        className={`mainContent main-content-container ${
-          isSidebarOpen ? "sidebar-open" : ""
-        }`}
-      >
+      <div className="mainContent main-content-container">
         <aside className="sidebar sidebar-container">
           <div className="sidebarGlow"></div>
           <div className="sidebarContent">
@@ -755,33 +749,6 @@ export default function App(): JSX.Element {
               );
             })}
           </MapContainer>
-
-          <button
-            className="sidebar-toggle"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="4" y1="21" x2="4" y2="14"></line>
-              <line x1="4" y1="10" x2="4" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12" y2="3"></line>
-              <line x1="20" y1="21" x2="20" y2="16"></line>
-              <line x1="20" y1="12" x2="20" y2="3"></line>
-              <line x1="1" y1="14" x2="7" y2="14"></line>
-              <line x1="9" y1="8" x2="15" y2="8"></line>
-              <line x1="17" y1="16" x2="23" y2="16"></line>
-            </svg>
-          </button>
 
           <div className="legend legend-container bg-black">
             <h4

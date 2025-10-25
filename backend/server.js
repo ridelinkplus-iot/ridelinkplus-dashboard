@@ -34,7 +34,7 @@ let busData = {}; // local cache { busId: { lat, lon, passengers, lastUpdate } }
 // ✅ API endpoint for GPS device updates
 app.post("/api/update-bus", async (req, res) => {
   try {
-    const { busId, lat, lon, passengers } = req.body;
+    const { busId, lat, lon, passengers, status } = req.body;
 
     if (!busId || typeof lat !== "number" || typeof lon !== "number") {
       return res
@@ -53,6 +53,7 @@ app.post("/api/update-bus", async (req, res) => {
       lat,
       lon,
       passengers: passengerCount,
+      status: status,
       lastUpdate: new Date().toISOString(),
     };
 
@@ -62,19 +63,29 @@ app.post("/api/update-bus", async (req, res) => {
       lat,
       lon,
       passengers: passengerCount,
+      status: status,
     });
 
     // ✅ Then update Firebase atomically
     const busRef = ref(db, `buses/${busId}`);
-    await update(busRef, {
+    const timestamp = new Date().toISOString().replace(/[.#$[\]:]/g, "_");
+
+    const updatePayload = {
       lat,
       lon,
-      passengers: passengerCount,
+      status: status,
       lastUpdated: Date.now(),
-    });
+    };
+
+    // Add passenger count as a new entry in the log, preserving the history
+    /* if (passengers !== undefined && passengers !== null) {
+      updatePayload[`passengers/${timestamp}`] = passengerCount;
+    } */
+
+    await update(busRef, updatePayload);
 
     console.log(
-      `✅ Bus ${busId} updated in Firebase: lat=${lat}, lon=${lon}, passengers=${passengerCount}`
+      `✅ Bus ${busId} updated in Firebase: lat=${lat}, lon=${lon}, passengers=${passengerCount}, status=${status}`
     );
 
     return res.json({
@@ -88,6 +99,54 @@ app.post("/api/update-bus", async (req, res) => {
 });
 
 
+// ✅ API endpoint for manually updating bus status
+app.post("/api/update-bus-status", async (req, res) => {
+  try {
+    const { busId, status } = req.body;
+
+    if (!busId || (status !== "online" && status !== "offline")) {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid busId or status" });
+    }
+
+    // ✅ Update local memory
+    if (busData[busId]) {
+      busData[busId].status = status;
+      busData[busId].lastUpdate = new Date().toISOString();
+    } else {
+      // If bus doesn't exist in local cache, create it
+      busData[busId] = {
+        status,
+        lastUpdate: new Date().toISOString(),
+        lat: null,
+        lon: null,
+        passengers: 0,
+      };
+    }
+
+    // ✅ Emit update to React clients
+    io.emit("busStatusUpdate", { busId, status });
+
+    // ✅ Update Firebase
+    const busRef = ref(db, `buses/${busId}`);
+    await update(busRef, {
+      status,
+      lastUpdated: Date.now(),
+    });
+
+    console.log(`✅ Bus ${busId} status updated to ${status} in Firebase`);
+
+    return res.json({
+      success: true,
+      message: `Bus ${busId} status updated to ${status} successfully`,
+    });
+  } catch (error) {
+    console.error("❌ Error updating bus status in Firebase:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // ✅ GET endpoint for debugging
 app.get("/api/buses", (req, res) => res.json(busData));
 
@@ -97,6 +156,6 @@ io.on("connection", (socket) => {
   socket.emit("initialData", busData);
 });
 
-server.listen(4000, () =>
-  console.log("🚀 Live API running on http://localhost:4000")
+server.listen(4002, () =>
+  console.log("🚀 Live API running on http://localhost:4002")
 );
