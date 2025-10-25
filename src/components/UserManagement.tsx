@@ -4,7 +4,6 @@ import {
   RotateCw,
   AlertCircle,
   Plus,
-  MoreVertical,
   Edit,
   Trash2
 } from "lucide-react";

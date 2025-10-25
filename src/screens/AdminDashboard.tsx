@@ -463,7 +463,7 @@ const AdminDashboard: React.FC = () => {
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
+                          `${name}: ${((percent as number) * 100).toFixed(0)}%`
                         }
                         outerRadius={100}
                         fill="#8884d8"
@@ -516,7 +516,9 @@ const AdminDashboard: React.FC = () => {
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent, value }) =>
-                          `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
+                          `${name}: ${value} (${(
+                            (percent as number) * 100
+                          ).toFixed(0)}%)`
                         }
                         outerRadius={100}
                         fill="#8884d8"
@@ -680,7 +682,9 @@ const AdminDashboard: React.FC = () => {
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent, value }) =>
-                          `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
+                          `${name}: ${value} (${(
+                            (percent as number) * 100
+                          ).toFixed(0)}%)`
                         }
                         outerRadius={100}
                         fill="#8884d8"

@@ -1,7 +1,15 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+
+type User = {
+  uid: string;
+  email: string;
+  provider: string;
+  createdAt: string;
+  lastSignIn: string;
+};
 
 const UsersList = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +50,7 @@ const UsersList = () => {
     <div style={{ padding: 20 }}>
       <h2>Authenticated Users</h2>
       <table
-        border="1"
+        border={1}
         cellPadding="8"
         style={{ width: "100%", borderCollapse: "collapse" }}
       >
