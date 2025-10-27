@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { loginUser } from "../authHelper";
+import "./OwnerLogin.css";
 
 const styles = {
   container: {
@@ -100,7 +101,9 @@ const OwnerLogin: React.FC = () => {
   return (
     <div style={styles.container}>
       <div style={styles.loginBox} className="login-box-container">
-        <h1 style={styles.title}>Bus Owner Login</h1>
+        <h1 style={styles.title} className="login-title">
+          Bus Owner Login
+        </h1>
         <input
           style={styles.input}
           type="email"
@@ -125,14 +128,6 @@ const OwnerLogin: React.FC = () => {
           </Link>
         </p>
       </div>
-      <style>{`
-        @media (max-width: 480px) {
-          .login-box-container {
-            width: 90%;
-            padding: 30px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

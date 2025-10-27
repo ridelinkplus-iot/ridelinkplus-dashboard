@@ -7,6 +7,7 @@ import {
   signInWithPopup
 } from "firebase/auth";
 import { loginUser } from "../authHelper";
+import "./PassengerLogin.css";
 
 const styles = {
   container: {
@@ -152,7 +153,9 @@ const PassengerLogin: React.FC = () => {
   return (
     <div style={styles.container}>
       <div style={styles.loginBox} className="login-box-container">
-        <h1 style={styles.title}>Passenger Login</h1>
+        <h1 style={styles.title} className="login-title">
+          Passenger Login
+        </h1>
         <input
           style={styles.input}
           type="email"
@@ -184,14 +187,6 @@ const PassengerLogin: React.FC = () => {
           </Link>
         </p>
       </div>
-      <style>{`
-        @media (max-width: 480px) {
-          .login-box-container {
-            width: 90%;
-            padding: 30px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

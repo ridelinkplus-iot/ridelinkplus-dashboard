@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { loginUser } from "../authHelper";
+import "./PassengerSignup.css";
 
 const styles = {
   container: {
@@ -98,8 +99,10 @@ const PassengerSignup: React.FC = () => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.signupBox}>
-        <h1 style={styles.title}>Passenger Sign Up</h1>
+      <div style={styles.signupBox} className="signup-box-container">
+        <h1 style={styles.title} className="signup-title">
+          Passenger Sign Up
+        </h1>
         <input
           style={styles.input}
           type="email"

@@ -2,6 +2,12 @@ import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { ref, set, remove, onValue } from "firebase/database";
 import { Users, MapPin, Bus, Edit2, Trash2, Plus, X } from "lucide-react";
+import {
+  generateOwnerId,
+  generatePermitId,
+  generateRouteId,
+  generateBusId
+} from "./idGenerator";
 
 export default function CRUD() {
   const [owners, setOwners] = useState({});
@@ -48,35 +54,59 @@ export default function CRUD() {
     onValue(ref(db, "owners"), (snap) => setOwners(snap.val() || {}));
     onValue(ref(db, "routes"), (snap) => setRoutes(snap.val() || {}));
     onValue(ref(db, "buses"), (snap) => setBuses(snap.val() || {}));
+
+    // Pre-fill IDs for new entries
+    prepareNewOwner();
+    prepareNewRoute();
+    prepareNewBus();
   }, []);
+
+  const prepareNewOwner = async () => {
+    const newOwnerId = await generateOwnerId();
+    const newPermitId = await generatePermitId();
+    setOwnerForm((prev) => ({
+      ...prev,
+      ownerId: newOwnerId,
+      permitId: newPermitId
+    }));
+  };
 
   // ---------- OWNER CRUD ----------
   const saveOwner = async () => {
-    if (!ownerForm.ownerId) return alert("Enter Owner ID");
+    if (!ownerForm.fullName) return alert("Enter Full Name");
+
+    let ownerDataToSave = { ...ownerForm };
+
+    if (!editingOwner) {
+      ownerDataToSave.ownerId = await generateOwnerId();
+      ownerDataToSave.permitId = await generatePermitId();
+    }
 
     if (
       editingOwner &&
       originalOwnerId &&
-      originalOwnerId !== ownerForm.ownerId
+      originalOwnerId !== ownerDataToSave.ownerId
     ) {
       await remove(ref(db, `owners/${originalOwnerId}`));
     }
 
-    const ownerRef = ref(db, `owners/${ownerForm.ownerId}`);
-    await set(ownerRef, ownerForm);
+    const ownerRef = ref(db, `owners/${ownerDataToSave.ownerId}`);
+    const { email, password, ...finalOwnerData } = ownerDataToSave;
+    await set(ownerRef, finalOwnerData);
     alert(editingOwner ? "✅ Owner updated!" : "✅ Owner added!");
+
+    // Clear form and prepare for next entry
     setOwnerForm({
-      ownerId: "",
       fullName: "",
       address: "",
       mobile: "",
       nic: "",
-      permitId: "",
       email: "",
       password: ""
     });
     setEditingOwner(false);
     setOriginalOwnerId(null);
+    prepareNewOwner();
   };
 
   const editOwner = (o) => {
@@ -92,24 +122,37 @@ export default function CRUD() {
     }
   };
 
+  const prepareNewRoute = async () => {
+    const newRouteId = await generateRouteId();
+    setRouteForm((prev) => ({ ...prev, routeId: newRouteId }));
+  };
+
   // ---------- ROUTE CRUD ----------
   const saveRoute = async () => {
-    if (!routeForm.routeId) return alert("Enter Route ID");
+    if (!routeForm.place1 || !routeForm.place2)
+      return alert("Enter both places");
+
+    let routeDataToSave = { ...routeForm };
+
+    if (!editingRoute) {
+      routeDataToSave.routeId = await generateRouteId();
+    }
 
     if (
       editingRoute &&
       originalRouteId &&
-      originalRouteId !== routeForm.routeId
+      originalRouteId !== routeDataToSave.routeId
     ) {
       await remove(ref(db, `routes/${originalRouteId}`));
     }
 
-    const routeRef = ref(db, `routes/${routeForm.routeId}`);
-    await set(routeRef, routeForm);
+    const routeRef = ref(db, `routes/${routeDataToSave.routeId}`);
+    await set(routeRef, routeDataToSave);
     alert(editingRoute ? "✅ Route updated!" : "✅ Route added!");
-    setRouteForm({ routeId: "", place1: "", place2: "" });
+    setRouteForm({ place1: "", place2: "" });
     setEditingRoute(false);
     setOriginalRouteId(null);
+    prepareNewRoute();
   };
 
   const editRoute = (r) => {
@@ -125,30 +168,39 @@ export default function CRUD() {
     }
   };
 
+  const prepareNewBus = async () => {
+    const newBusId = await generateBusId();
+    setBusForm((prev) => ({ ...prev, busId: newBusId }));
+  };
+
   // ---------- BUS CRUD ----------
   const saveBus = async () => {
-    if (!busForm.busId) return alert("Enter Bus ID");
     if (!busForm.routeId || !busForm.ownerId)
       return alert("Select valid Route ID and Owner ID");
 
-    if (editingBus && originalBusId && originalBusId !== busForm.busId) {
+    let busDataToSave = { ...busForm };
+
+    if (!editingBus) {
+      busDataToSave.busId = await generateBusId();
+    }
+
+    if (editingBus && originalBusId && originalBusId !== busDataToSave.busId) {
       await remove(ref(db, `buses/${originalBusId}`));
     }
 
-    const busRef = ref(db, `buses/${busForm.busId}`);
+    const busRef = ref(db, `buses/${busDataToSave.busId}`);
     await set(busRef, {
-      busId: busForm.busId,
-      routeId: busForm.routeId,
-      ownerId: busForm.ownerId,
-      lat: parseFloat(busForm.lat) || 0,
-      lon: parseFloat(busForm.lon) || 0,
+      busId: busDataToSave.busId,
+      routeId: busDataToSave.routeId,
+      ownerId: busDataToSave.ownerId,
+      lat: parseFloat(busDataToSave.lat) || 0,
+      lon: parseFloat(busDataToSave.lon) || 0,
       passengers: 0, // Initialize passengers
-      status: busForm.status,
+      status: busDataToSave.status,
       lastUpdated: Date.now() // Add timestamp
     });
     alert(editingBus ? "✅ Bus updated!" : "✅ Bus added!");
     setBusForm({
-      busId: "",
       routeId: "",
       ownerId: "",
       lat: "",
@@ -157,6 +209,7 @@ export default function CRUD() {
     });
     setEditingBus(false);
     setOriginalBusId(null);
+    prepareNewBus();
   };
 
   const editBus = (b) => {
@@ -186,7 +239,7 @@ export default function CRUD() {
 
     try {
       const response = await fetch(
-        "http://localhost:4002/api/update-bus-status",
+        "https://unskilful-adrian-stagy.ngrok-free.dev/api/update-bus-status",
         {
           method: "POST",
           headers: {
@@ -251,19 +304,22 @@ export default function CRUD() {
               ["Address", "address"],
               ["Mobile", "mobile"],
               ["NIC", "nic"],
-              ["Permit ID", "permitId"],
-              ["Email", "email"],
-              ["Password", "password"]
+              ["Permit ID", "permitId"]
             ].map(([ph, key]) => (
               <div key={key}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {ph}
                 </label>
                 <input
-                  type={key === "password" ? "password" : "text"}
+                  type="text"
                   placeholder={ph}
+                  readOnly={
+                    (key === "ownerId" || key === "permitId") && !editingOwner
+                  }
                   className={`text-black w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
-                    key === "ownerId" && editingOwner
+                    (key === "ownerId" || key === "permitId") && !editingOwner
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : key === "ownerId" && editingOwner
                       ? "bg-yellow-50 border-yellow-300"
                       : "border-gray-300 hover:border-[#0B7285]"
                   }`}
@@ -290,17 +346,16 @@ export default function CRUD() {
             </button>
             <button
               onClick={() => {
+                setEditingOwner(false);
                 setOwnerForm({
-                  ownerId: "",
                   fullName: "",
                   address: "",
                   mobile: "",
                   nic: "",
-                  permitId: "",
                   email: "",
                   password: ""
                 });
-                setEditingOwner(false);
+                prepareNewOwner();
               }}
               className="flex items-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-200"
             >
@@ -326,9 +381,6 @@ export default function CRUD() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Mobile
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Email
-                    </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
                     </th>
@@ -348,9 +400,6 @@ export default function CRUD() {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {o.mobile}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {o.email}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -398,8 +447,11 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Route ID"
+                readOnly={!editingRoute}
                 className={`text-black w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
-                  editingRoute
+                  !editingRoute
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : editingRoute
                     ? "bg-yellow-50 border-yellow-300"
                     : "border-gray-300 hover:border-[#0B7285]"
                 }`}
@@ -451,8 +503,9 @@ export default function CRUD() {
             </button>
             <button
               onClick={() => {
-                setRouteForm({ routeId: "", place1: "", place2: "" });
                 setEditingRoute(false);
+                setRouteForm({ place1: "", place2: "" });
+                prepareNewRoute();
               }}
               className="flex items-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-200"
             >
@@ -544,8 +597,11 @@ export default function CRUD() {
               </label>
               <input
                 placeholder="Bus ID"
+                readOnly={!editingBus}
                 className={`text-black w-full px-4 py-2.5 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-[#0B7285] focus:border-transparent ${
-                  editingBus
+                  !editingBus
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : editingBus
                     ? "bg-yellow-50 border-yellow-300"
                     : "border-gray-300 hover:border-[#0B7285]"
                 }`}
@@ -653,15 +709,15 @@ export default function CRUD() {
             </button>
             <button
               onClick={() => {
+                setEditingBus(false);
                 setBusForm({
-                  busId: "",
                   routeId: "",
                   ownerId: "",
                   lat: "",
                   lon: "",
                   status: "offline"
                 });
-                setEditingBus(false);
+                prepareNewBus();
               }}
               className="flex items-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-200"
             >

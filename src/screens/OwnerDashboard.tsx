@@ -43,6 +43,7 @@ interface BusData {
   routeId: string;
   ownerId: string;
   status?: string;
+  passengers?: { [key: string]: number };
 }
 
 interface TripData {
@@ -114,40 +115,31 @@ const AdvancedOwnerDashboard: React.FC = () => {
 
         const busesRef = ref(db, "buses");
         onValue(busesRef, (busSnapshot) => {
-          const allBuses = busSnapshot.val();
-          const ownerBuses = Object.values(allBuses || {}).filter(
+          const allBuses = busSnapshot.val() || {};
+          const ownerBuses = Object.values(allBuses).filter(
             (bus: any) => bus.ownerId === currentOwner.ownerId
           ) as BusData[];
           setBuses(ownerBuses);
+
+          let allPassengersData: any[] = [];
+          ownerBuses.forEach((bus) => {
+            if (bus.passengers) {
+              const busPassengers = Object.entries(bus.passengers).map(
+                ([timestamp, count]) => ({
+                  busId: bus.busId,
+                  timestamp: timestamp.replace(/_/g, ":"),
+                  count: count
+                })
+              );
+              allPassengersData.push(...busPassengers);
+            }
+          });
+          setPassengers(allPassengersData);
         });
 
         const routesRef = ref(db, "routes");
         onValue(routesRef, (routeSnapshot) => {
           routeSnapshot.val();
-        });
-
-        const tripsRef = ref(db, "trips");
-        onValue(tripsRef, (tripSnapshot) => {
-          const allTrips = tripSnapshot.val();
-          const ownerTrips = Object.values(allTrips || {}).filter(
-            (trip: any) => trip.ownerId === currentOwner.ownerId
-          ) as TripData[];
-          setTrips(ownerTrips);
-        });
-
-        const revenueRef = ref(db, "revenue");
-        onValue(revenueRef, (revSnapshot) => {
-          const allRevenue = revSnapshot.val();
-          const ownerRevenue = Object.values(allRevenue || {}).filter(
-            (rev: any) => rev.ownerId === currentOwner.ownerId
-          ) as RevenueData[];
-          setRevenue(ownerRevenue);
-        });
-
-        const passengersRef = ref(db, "passengers");
-        onValue(passengersRef, (passSnapshot) => {
-          const allPassengers = passSnapshot.val();
-          setPassengers(Object.values(allPassengers || {}));
         });
 
         setLoading(false);
@@ -212,32 +204,30 @@ const AdvancedOwnerDashboard: React.FC = () => {
 
   const calculateStats = () => {
     const totalBuses = buses.length;
-    const activeBuses = buses.filter((bus) => bus.status === "active").length;
-    const totalTrips = trips.reduce((sum, t) => sum + (t.trips || 0), 0);
-    const totalRevenue = revenue.reduce((sum, r) => sum + (r.revenue || 0), 0);
-    const avgPassengers = Math.floor(passengers.length / (totalBuses || 1));
+    const onlineBuses = buses.filter((bus) => bus.status === "online").length;
+    const offlineBuses = totalBuses - onlineBuses;
 
-    return { totalBuses, activeBuses, totalTrips, totalRevenue, avgPassengers };
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const currentMonthPassengers = passengers
+      .filter((p) => {
+        const date = new Date(p.timestamp);
+        return (
+          date.getMonth() === currentMonth && date.getFullYear() === currentYear
+        );
+      })
+      .reduce((sum, p) => sum + p.count, 0);
+
+    return { totalBuses, onlineBuses, offlineBuses, currentMonthPassengers };
   };
 
   const getBusStatusData = () => {
-    const filteredBuses =
-      selectedBus === "all"
-        ? buses
-        : buses.filter((bus) => bus.busId === selectedBus);
-
-    const active = filteredBuses.filter((b) => b.status === "active").length;
-    const inactive = filteredBuses.filter(
-      (b) => b.status === "inactive"
-    ).length;
-    const maintenance = filteredBuses.filter(
-      (b) => b.status === "maintenance"
-    ).length;
+    const online = buses.filter((b) => b.status === "online").length;
+    const offline = buses.length - online;
 
     return [
-      { name: "Active", value: active, color: "#10b981" },
-      { name: "Inactive", value: inactive, color: "#ef4444" },
-      { name: "Maintenance", value: maintenance, color: "#f59e0b" }
+      { name: "Online", value: online, color: "#10b981" },
+      { name: "Offline", value: offline, color: "#ef4444" }
     ];
   };
 
@@ -276,10 +266,24 @@ const AdvancedOwnerDashboard: React.FC = () => {
     }));
   };
 
+  const getPassengerChartData = () => {
+    const passengerCounts = new Map<string, number>();
+    getFilteredPassengers().forEach((p: any) => {
+      const date = new Date(p.timestamp);
+      const day = date.getDate().toString();
+      passengerCounts.set(day, (passengerCounts.get(day) || 0) + p.count);
+    });
+    return Array.from(passengerCounts, ([day, passengers]) => ({
+      day,
+      passengers
+    }));
+  };
+
   const stats = calculateStats();
   const busStatusData = getBusStatusData();
   const routePerformance = getRoutePerformance();
   const filteredPassengers = getFilteredPassengers();
+  const passengerChartData = getPassengerChartData();
   const filteredBuses = buses.filter((bus) =>
     bus.busId.toLowerCase().includes(busSearchTerm.toLowerCase())
   );
@@ -351,107 +355,26 @@ const AdvancedOwnerDashboard: React.FC = () => {
           />
           <StatCard
             icon={Activity}
-            title="Active Buses"
-            value={stats.activeBuses}
-            change={8}
+            title="Online Buses"
+            value={stats.onlineBuses}
             color="from-green-500 to-green-600"
           />
           <StatCard
-            icon={TrendingUp}
-            title="Total Trips"
-            value={stats.totalTrips}
-            change={15}
-            color="from-medium-teal to-dark-teal"
-          />
-          <StatCard
-            icon={DollarSign}
-            title="Revenue"
-            value={`$${(stats.totalRevenue / 1000).toFixed(1)}K`}
-            change={23}
-            color="from-yellow-gold to-orange"
+            icon={Bus}
+            title="Offline Buses"
+            value={stats.offlineBuses}
+            color="from-red-500 to-red-600"
           />
           <StatCard
             icon={Users}
-            title="Avg Passengers"
-            value={stats.avgPassengers}
-            change={5}
-            color="from-orange to-red"
+            title="Current Month Passengers"
+            value={stats.currentMonthPassengers}
+            color="from-indigo-500 to-purple-600"
           />
         </div>
 
         {/* Charts Row 1 */}
         <div className="charts-grid">
-          {/* Revenue Chart */}
-          <div className="chart-container">
-            <h2 className="chart-title">Revenue & Expenses</h2>
-            <ResponsiveContainer
-              width="100%"
-              height={250}
-              className="md:h-[300px]"
-            >
-              <AreaChart data={revenue}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="var(--medium-teal)"
-                      stopOpacity={0.8}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="var(--medium-teal)"
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                  <linearGradient
-                    id="colorExpenses"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor="var(--red)"
-                      stopOpacity={0.8}
-                    />
-                    <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="month"
-                  stroke="#9ca3af"
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1f2937",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "14px"
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: "14px" }} />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="var(--medium-teal)"
-                  fillOpacity={1}
-                  fill="url(#colorRevenue)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expenses"
-                  stroke="var(--red)"
-                  fillOpacity={1}
-                  fill="url(#colorExpenses)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
           {/* Bus Status */}
           <div className="chart-container">
             <div className="flex justify-between items-center mb-4">
@@ -555,7 +478,7 @@ const AdvancedOwnerDashboard: React.FC = () => {
               height={250}
               className="md:h-[300px]"
             >
-              <BarChart data={filteredPassengers}>
+              <BarChart data={passengerChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="day" stroke="#9ca3af" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
@@ -658,14 +581,12 @@ const AdvancedOwnerDashboard: React.FC = () => {
                       <td>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            bus.status === "active"
+                            bus.status === "online"
                               ? "bg-green-500/20 text-green-400"
-                              : bus.status === "maintenance"
-                              ? "bg-yellow-500/20 text-yellow-400"
                               : "bg-red-500/20 text-red-400"
                           }`}
                         >
-                          {bus.status || "Active"}
+                          {bus.status || "offline"}
                         </span>
                       </td>
                       <td>{new Date().toLocaleDateString()}</td>

@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getDatabase, ref, set } from "firebase/database";
 import { loginUser } from "../authHelper";
+import { generateOwnerId, generatePermitId } from "../idGenerator";
+import "./OwnerSignup.css";
 
 const styles = {
   container: {
@@ -37,11 +39,6 @@ const styles = {
     WebkitTextFillColor: "transparent",
     backgroundClip: "text",
     letterSpacing: "-1px"
-  },
-  form: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px"
   },
   input: {
     background: "rgba(0, 0, 0, 0.3)",
@@ -93,6 +90,19 @@ const OwnerSignup: React.FC = () => {
   });
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const fetchNewIds = async () => {
+      const newOwnerId = await generateOwnerId();
+      const newPermitId = await generatePermitId();
+      setFormData((prev) => ({
+        ...prev,
+        ownerId: newOwnerId,
+        permitId: newPermitId
+      }));
+    };
+    fetchNewIds();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -130,9 +140,11 @@ const OwnerSignup: React.FC = () => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.signupBox}>
-        <h1 style={styles.title}>Bus Owner Sign Up</h1>
-        <div style={styles.form}>
+      <div style={styles.signupBox} className="signup-box-container">
+        <h1 style={styles.title} className="signup-title">
+          Bus Owner Sign Up
+        </h1>
+        <div style={styles.form} className="signup-form">
           <input
             style={styles.input}
             name="fullName"
@@ -141,11 +153,12 @@ const OwnerSignup: React.FC = () => {
             onChange={handleChange}
           />
           <input
-            style={styles.input}
+            style={{ ...styles.input, backgroundColor: "rgba(0,0,0,0.5)" }}
             name="ownerId"
             type="text"
-            placeholder="Owner ID (e.g., RidelinkOwner001)"
-            onChange={handleChange}
+            placeholder="Owner ID"
+            value={formData.ownerId}
+            readOnly
           />
           <input
             style={styles.input}
@@ -176,11 +189,12 @@ const OwnerSignup: React.FC = () => {
             onChange={handleChange}
           />
           <input
-            style={styles.input}
+            style={{ ...styles.input, backgroundColor: "rgba(0,0,0,0.5)" }}
             name="permitId"
             type="text"
             placeholder="Permit ID"
-            onChange={handleChange}
+            value={formData.permitId}
+            readOnly
           />
           <input
             style={{ ...styles.input, ...styles.fullWidth }}

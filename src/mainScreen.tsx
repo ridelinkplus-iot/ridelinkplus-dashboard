@@ -87,12 +87,14 @@ export default function App(): JSX.Element {
   const mapRef = useRef<any | null>(null);
   const navigate = useNavigate();
   useEffect(() => {
-    const socket = io("http://localhost:4002");
+    const socket = io("https://unskilful-adrian-stagy.ngrok-free.dev");
 
     // ✅ 1️⃣ Fetch latest data from API when app loads or refreshes
     const fetchApiData = async () => {
       try {
-        const response = await fetch("http://localhost:4002/api/buses");
+        const response = await fetch(
+          "https://unskilful-adrian-stagy.ngrok-free.dev/api/buses"
+        );
         const data = await response.json();
 
         // Merge API data with Firebase buses
@@ -691,21 +693,70 @@ export default function App(): JSX.Element {
                   eventHandlers={{ click: () => handleSelectBus(b) }}
                 >
                   <Popup>
-                    <div style={{ padding: "12px", minWidth: "220px" }}>
+                    <div
+                      style={{
+                        padding: "12px",
+                        minWidth: "240px",
+                        fontFamily: "sans-serif"
+                      }}
+                    >
                       <div
                         style={{
-                          fontWeight: "bold",
-                          color: "#8b5cf6",
-                          fontSize: "18px",
-                          marginBottom: "10px"
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: "12px"
                         }}
                       >
-                        {b.busId || "Bus"}
-                      </div>
-                      <div style={{ fontSize: 14, color: "#374151" }}>
                         <div
                           style={{
-                            marginBottom: "8px",
+                            fontWeight: "bold",
+                            color: "#8b5cf6",
+                            fontSize: "18px"
+                          }}
+                        >
+                          {b.busId || "Bus"}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px"
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              borderRadius: "50%",
+                              background:
+                                b.status === "online" ? "#10b981" : "#ef4444"
+                            }}
+                          ></div>
+                          <span
+                            style={{
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              color:
+                                b.status === "online" ? "#10b981" : "#ef4444",
+                              textTransform: "capitalize"
+                            }}
+                          >
+                            {b.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#374151",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "8px"
+                        }}
+                      >
+                        <div
+                          style={{
                             padding: "8px",
                             background: "#f3f4f6",
                             borderRadius: "6px"
@@ -721,7 +772,6 @@ export default function App(): JSX.Element {
                         {b.passengers !== undefined && (
                           <div
                             style={{
-                              marginBottom: "8px",
                               padding: "8px",
                               background: "#f0fdf4",
                               borderRadius: "6px"
@@ -732,6 +782,28 @@ export default function App(): JSX.Element {
                             </span>
                             <span style={{ fontWeight: 700, color: "#10b981" }}>
                               {getLatestPassengerCount(b) ?? "N/A"}
+                            </span>
+                          </div>
+                        )}
+                        {isNum(b.lat) && isNum(b.lon) && (
+                          <div
+                            style={{
+                              padding: "8px",
+                              background: "#eef2ff",
+                              borderRadius: "6px"
+                            }}
+                          >
+                            <span style={{ color: "#6b7280", fontWeight: 600 }}>
+                              Coords:{" "}
+                            </span>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: "#4f46e5",
+                                fontFamily: "monospace"
+                              }}
+                            >
+                              {b.lat.toFixed(5)}, {b.lon.toFixed(5)}
                             </span>
                           </div>
                         )}
@@ -1261,7 +1333,6 @@ function SearchPanel({
 }): JSX.Element {
   const [startText, setStartText] = useState("");
   const [endText, setEndText] = useState("");
-  const [busIdText, setBusIdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [usingMyLoc, setUsingMyLoc] = useState(false);
   const [myLoc, setMyLoc] = useState<MaybeLatLon>(null);
@@ -1270,6 +1341,9 @@ function SearchPanel({
   const [showStartDropdown, setShowStartDropdown] = useState(false);
   const [showEndDropdown, setShowEndDropdown] = useState(false);
   const [dbLocations, setDbLocations] = useState<string[]>([]);
+
+  const canSearchRoute =
+    (startText.trim().length > 0 || usingMyLoc) && endText.trim().length > 0;
 
   // Extract locations from routes using place1 and place2
   useEffect(() => {
@@ -1363,55 +1437,10 @@ function SearchPanel({
   const searchRoute = async () => {
     setLoading(true);
 
-    if (busIdText.trim()) {
-      const busId = busIdText.trim();
-      const bus = buses.find(
-        (b) => b.busId?.toString().toLowerCase() === busId.toLowerCase()
-      );
-
-      if (bus) {
-        const route = routes.find((r) => r.routeId === bus.routeId);
-        if (route) {
-          const stops = (route.stops || [])
-            .map((s) => ({ lat: num(s.lat), lon: num(s.lon) }))
-            .filter((s) => isNum(s.lat) && isNum(s.lon));
-
-          if (stops.length > 0) {
-            const start = stops[0];
-            const end = stops[stops.length - 1];
-            const segment = stops.map(
-              (p) => [p.lat, p.lon] as [number, number]
-            );
-            onSearchResult({
-              status: "success",
-              payload: { start, end, route, segment }
-            });
-          } else {
-            onSearchResult({
-              status: "not_found",
-              message: `Route ${route.routeId} found, but it has no stops.`
-            });
-          }
-        } else {
-          onSearchResult({
-            status: "not_found",
-            message: `Could not find route information for bus ${busId}.`
-          });
-        }
-      } else {
-        onSearchResult({
-          status: "not_found",
-          message: `Bus with ID "${busId}" not found.`
-        });
-      }
-      setLoading(false);
-      return;
-    }
-
     if ((!startText && !usingMyLoc) || !endText) {
       onSearchResult({
         status: "error",
-        message: "Please enter start/destination or a Bus ID."
+        message: "Please enter a start and destination."
       });
       setLoading(false);
       return;
@@ -1580,41 +1609,6 @@ function SearchPanel({
         </svg>
         Search Routes
       </h2>
-
-      <div className="inputWrapper" style={{ position: "relative" }}>
-        <div className="inputIcon">
-          <svg
-            style={{ width: 22, height: 22 }}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
-            />
-          </svg>
-        </div>
-        <input
-          className="input"
-          placeholder="Enter Bus ID"
-          value={busIdText}
-          onChange={(e) => setBusIdText(e.target.value)}
-        />
-      </div>
-
-      <div
-        style={{
-          textAlign: "center",
-          color: "#a78bfa",
-          margin: "0px 0px 14px",
-          fontWeight: 600
-        }}
-      >
-        OR
-      </div>
 
       <div className="inputWrapper" style={{ position: "relative" }}>
         <div className="inputIcon">
@@ -1861,7 +1855,11 @@ function SearchPanel({
         )}
       </div>
 
-      <button onClick={searchRoute} disabled={loading} className="button">
+      <button
+        onClick={searchRoute}
+        disabled={loading || !canSearchRoute}
+        className="button"
+      >
         {loading ? (
           <>
             <svg
